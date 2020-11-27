@@ -13,6 +13,8 @@
 #include<unordered_map>
 #include<utility>
 #include<queue>
+#include<pthread.h>
+#include "lock_table.h"
 
 #define PAGE_SIZE 4096
 typedef uint64_t pagenum_t; // 8 bytes

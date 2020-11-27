@@ -121,12 +121,13 @@ int main() {
 			cin >> table_id;
 			cout << "input key : ";
 			cin >> key;
-			if (db_find(table_id, key, find_value) == 0) {
+			/*if (db_find(table_id, key, find_value) == 0) {
 				cout <<"FIND : " << find_value<<"\n";
 			}
 			else {
 				cout << "CANNOT FIND\n";
 			}
+			*/
 		}
 		else if (instruction == 'e') {
 			cout <<"Input table id : ";

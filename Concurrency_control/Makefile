@@ -15,7 +15,7 @@ TARGET_SRC:=$(SRCDIR)main.cpp
 TARGET_OBJ:=$(SRCDIR)main.o
 
 # Include more files if you write another source file.
-SRCS_FOR_LIB:=$(SRCDIR)bpt.cpp $(SRCDIR)file.cpp $(SRCDIR)buffer.cpp
+SRCS_FOR_LIB:=$(SRCDIR)bpt.cpp $(SRCDIR)file.cpp $(SRCDIR)buffer.cpp $(SRCDIR)trx.cpp $(SRCDIR)lock_table.cpp 
 OBJS_FOR_LIB:=$(SRCS_FOR_LIB:.cpp=.o)
 
 CPPFLAGS= -g -fPIC -I $(INC)

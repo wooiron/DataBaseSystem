@@ -283,7 +283,63 @@ void print_tree(int table_id) {
 
 /////////////////////////////////////////////////
 
-int db_find(int table_id,int64_t key, char * ret_val) {
+void roll_back(int table_id,int64_t key, char* values){
+	int hp_idx = buf_get_header_page(table_id);
+	Header_Page* hp = buffer.frame_pool[hp_idx]->header_page;
+
+	page_t * page;
+	pagenum_t pagenum;
+
+    int index;
+    int page_idx;
+    pagenum = find(table_id,key);
+
+   	page_idx = buf_get_page(table_id,pagenum);
+   	page = buffer.frame_pool[page_idx]->page;
+   	index = binary_search(page, key);
+    strcpy(page->kv_leaf[index].value,values);
+}
+
+int db_update(int table_id, int64_t key, char* values, int trx_id){
+	
+	if(buffer.table_count < table_id){
+		return -1;
+	}
+
+	hp_idx = buf_get_header_page(table_id);
+	hp = buffer.frame_pool[hp_idx]->header_page;
+
+	page_t * page;
+	pagenum_t pagenum;
+
+	int index;
+	int page_idx;
+	pagenum = find(table_id,key);
+	if(pagenum == 0) return 1;
+	
+	page_idx = buf_get_page(table_id,pagenum);
+	page = buffer.frame_pool[page_idx]->page;
+	buffer.frame_pool[page_idx]->is_pinned++;
+
+	index = binary_search(page, key);
+	
+	if(lock_acquire(table_id,key,trx_id,EXCLUSIVE) == NULL){
+		return ABORT;
+	}
+
+	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys) {
+		if(trx_manager[trx_id]->undo_list.find({table_id,key}) == trx_manager[trx_id]->undo_list.end()){
+			trx_manager[trx_id]->undo_list[{table_id,key}] = page->kv_leaf[index].value;
+		}
+		strcpy(page->kv_leaf[index].value,values);
+		buffer.frame_pool[page_idx]->is_pinned--;
+		return 0;
+	}
+	buffer.frame_pool[page_idx]->is_pinned--;
+	return 1;
+}
+
+int db_find(int table_id,int64_t key, char * ret_val, int trx_id) {
 	if(buffer.table_count < table_id){
 		return -1;
 	}
@@ -303,6 +359,11 @@ int db_find(int table_id,int64_t key, char * ret_val) {
 	buffer.frame_pool[page_idx]->is_pinned++;
 
 	index = binary_search(page, key);
+	
+	if(lock_acquire(table_id,key,trx_id,SHARED) == NULL){
+		return ABORT;
+	}
+
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys) {
 		strcpy(ret_val, page->kv_leaf[index].value);
 		buffer.frame_pool[page_idx]->is_pinned--;

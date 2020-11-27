@@ -7,9 +7,9 @@
 #define MIN_BUFFER_SIZE 4
 #define MAX_BUFFER_SIZE 1000000
 
-typedef pair<int,pagenum_t> Pair;
+typedef pair<int,pagenum_t> Pair1;
 
-struct pair_hash{
+struct pair_hash1{
     template<class T1,class T2>
     size_t operator()(const pair<T1,T2> &pair) const{
         auto hash1 = hash<T1>{}(pair.first);
@@ -31,6 +31,8 @@ struct Frame{
     bool is_dirty;
     int is_pinned;
 
+    pthread_mutex_t page_latch;
+
     Frame * prev;
     Frame * next; // store next page
 
@@ -45,7 +47,6 @@ struct LRU_table{
 };
 
 struct Buffer{
-    
     Frame** frame_pool;
 
     int frame_size;
@@ -62,9 +63,13 @@ struct Buffer{
 
     map<string,int> pathname_map; // manage pathname and table_id
 
-    unordered_map<Pair,int,pair_hash> frame_map; // manage frame group
+    unordered_map<Pair1,int,pair_hash1> frame_map; // manage frame group
+
+    pthread_mutex_t buffer_manager_latch;
 };
 
+
+extern Buffer buffer;
 
 int buf_open_table(char* pathname); // OK
 

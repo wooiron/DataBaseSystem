@@ -2,6 +2,7 @@
 #define __BPT_H__
 
 #include "buffer.h"
+#include "trx.h"
 
 #define DEFALT_LEAF_ORDER 32
 #define DEFALT_INTERNAL_ORDER 249
@@ -40,7 +41,7 @@ void print_free_page(int table_id);
 /////////////////////////////////////////////////
 
 int db_update(int table_id, int64_t key, char* values, int trx_id);
-
+void roll_back(int table_id,int64_t key, char* values);
 //////////////////////////////////////////////////
 
 			     /*SEARCHING*/

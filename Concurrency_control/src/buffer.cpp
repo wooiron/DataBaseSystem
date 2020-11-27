@@ -124,7 +124,7 @@ void modify_frame_pool(int idx){
 }
 
 int insert_into_frame_pool(Frame * frame,int table_id,pagenum_t pagenum){
-    
+
     int index;
     // if no space
     if(buffer.empty_frame_idx.empty()){
@@ -166,7 +166,6 @@ int insert_into_frame_pool(Frame * frame,int table_id,pagenum_t pagenum){
             buffer.LRU.tail = frame;
             frame->next = NULL;
         }
-
         return index;
     }
     // frame pool is full
@@ -252,11 +251,14 @@ int insert_into_frame_pool(Frame * frame,int table_id,pagenum_t pagenum){
 
 
 Frame * make_frame(int table_id,pagenum_t pagenum){
+    
     Frame * frame = (Frame*)calloc(1,sizeof(Frame));
     frame->is_dirty =0;
     frame->is_pinned =0;
     frame->table_id = table_id;
     frame->page_num = pagenum;
+    frame->page_latch = PTHREAD_MUTEX_INITIALIZER;
+
     return frame;
 }
 
@@ -281,6 +283,9 @@ int buf_init_db(int num_buf){
     buffer.frame_size = num_buf;
     
     buffer.LRU.head = buffer.LRU.tail = NULL;
+
+    buffer.buffer_manager_latch = PTHREAD_MUTEX_INITIALIZER;
+
     return 0;
 }
 
@@ -290,6 +295,8 @@ int buf_get_header_page(int table_id){
 }
 
 int buf_get_page(int table_id,pagenum_t pagenum){
+
+    pthread_mutex_lock(&buffer.buffer_manager_latch);
     int index =0;
     // if map is empty
     if(buffer.frame_map.empty()){
@@ -299,8 +306,11 @@ int buf_get_page(int table_id,pagenum_t pagenum){
             
             Frame * frame = make_frame(table_id,pagenum);
             frame->header_page = page;
+            pthread_mutex_lock(&frame->page_latch);
 
             index = insert_into_frame_pool(frame,table_id,pagenum);
+            pthread_mutex_unlock(&buffer.buffer_manager_latch);
+            pthread_mutex_unlock(&frame->page_latch);
             return index;
         }
         else{
@@ -309,8 +319,11 @@ int buf_get_page(int table_id,pagenum_t pagenum){
 
             Frame * frame = make_frame(table_id,pagenum);
             frame->page = page;
+            pthread_mutex_lock(&frame->page_latch);
 
             index = insert_into_frame_pool(frame,table_id,pagenum);
+            pthread_mutex_unlock(&buffer.buffer_manager_latch);
+            pthread_mutex_unlock(&frame->page_latch);
             return index;
         }
     }
@@ -322,6 +335,7 @@ int buf_get_page(int table_id,pagenum_t pagenum){
             // get frame index
             index = tmp->second;
             modify_frame_pool(index);
+            pthread_mutex_unlock(&buffer.buffer_manager_latch);
             return index;
         }
         else{
@@ -331,8 +345,11 @@ int buf_get_page(int table_id,pagenum_t pagenum){
             
                 Frame * frame = make_frame(table_id,pagenum);
                 frame->header_page = page;
+                pthread_mutex_lock(&frame->page_latch);
 
                 index = insert_into_frame_pool(frame,table_id,pagenum);
+                pthread_mutex_unlock(&buffer.buffer_manager_latch);
+                pthread_mutex_unlock(&frame->page_latch);
                 return index;
             }
             else{
@@ -341,8 +358,11 @@ int buf_get_page(int table_id,pagenum_t pagenum){
 
                 Frame * frame = make_frame(table_id,pagenum);
                 frame->page = page;
+                pthread_mutex_lock(&frame->page_latch);
 
                 index = insert_into_frame_pool(frame,table_id,pagenum);
+                pthread_mutex_unlock(&buffer.buffer_manager_latch);
+                pthread_mutex_unlock(&frame->page_latch);
                 return index;
             }
         }
@@ -351,7 +371,6 @@ int buf_get_page(int table_id,pagenum_t pagenum){
 
 // alloc table_id and page
 pagenum_t buf_alloc_page(int table_id){
-
     pagenum_t pagenum;
 
     pagenum_t freepagenum;
@@ -381,7 +400,6 @@ pagenum_t buf_alloc_page(int table_id){
 }
 
 void buf_free_page(int table_id, pagenum_t pagenum){
-
     int hp_idx = buf_get_header_page(table_id);
     Header_Page * hp = buffer.frame_pool[hp_idx]->header_page;
     
