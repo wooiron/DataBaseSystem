@@ -11,7 +11,9 @@ void trx_abort(int trx_id, int table_id, int key)
     trx_obj *obj = trx_manager[trx_id];
     auto L = obj->lock_list.begin();
 
-    for (int i = 0; i < obj->lock_list.size(); i++)
+    int Size = obj->lock_list.size();
+
+    for (int i = 0; i < Size; i++)
     {
         lock_release(obj->lock_list.front());
         obj->lock_list.pop_front();
@@ -37,7 +39,9 @@ int trx_begin(void)
 
     int trx_id = trx_manager.size() + 1;
 
-    trx_obj *obj = (trx_obj *)calloc(1, sizeof(trx_obj));
+    trx_obj *obj = new trx_obj; //(trx_obj *)calloc(1, sizeof(trx_obj));
+    //obj->held_lock = calloc(1,sizeof(unordered_map<pair<int, int>, char *, pair_hash>));
+    //obj->undo_list = calloc(1,sizeof(unordered_map<pair<int, int>, lock_t *, pair_hash>));
     trx_manager[trx_id] = obj;
 
     pthread_mutex_unlock(&trx_manager_latch);
@@ -60,7 +64,9 @@ int trx_commit(int trx_id)
     //auto L = obj->lock_list.begin();
     //!obj->lock_list.empty()
 
-    for (int i = 0; i < obj->lock_list.size(); i++)
+    int Size = obj->lock_list.size();
+
+    for (int i = 0; i < Size; i++)
     {
         lock_release(obj->lock_list.front());
         obj->lock_list.pop_front();

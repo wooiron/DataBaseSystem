@@ -370,11 +370,13 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys)
 	{
+		// MODIFIED !!!!!!!!!!!!!!!!!!!!!
 		if (trx_manager[trx_id]->undo_list.find({table_id, key}) == trx_manager[trx_id]->undo_list.end())
 		{
 			trx_manager[trx_id]->undo_list[{table_id, key}] = page->kv_leaf[index].value;
 		}
 		strcpy(page->kv_leaf[index].value, values);
+		buffer.frame_pool[page_idx]->is_dirty=1;	
 		buffer.frame_pool[page_idx]->is_pinned--;
 		return 0;
 	}

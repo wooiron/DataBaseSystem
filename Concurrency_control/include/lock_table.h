@@ -41,6 +41,18 @@ struct pair_hash{
     }
 };
 
+namespace std
+{
+   template<>
+   class hash<pair<int, int64_t>>
+   {
+   public:
+      size_t operator()(const pair<int, int64_t>& k) const
+      {
+         return ((uint16_t)hash<int>()(k.first) << 32) ^ hash<int64_t>()(k.second);
+      }
+   };
+}
 
 struct Info{
     lock_t * head;
@@ -52,7 +64,7 @@ struct lock_t {
 	lock_t * prev;
 	lock_t * next;
 	pthread_cond_t cond;
-	unordered_map<Pair,Info,pair_hash>::iterator iter;
+	unordered_map<pair<int,int64_t>,Info>::iterator iter;
     int lock_m;
     int lock_state;
     lock_t * trx_next_lock; // use in trx

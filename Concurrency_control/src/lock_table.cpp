@@ -1,6 +1,6 @@
 #include "trx.h"
 
-unordered_map<Pair, Info, pair_hash> hash_table;
+unordered_map<pair<int,int64_t>, Info> hash_table;
 pthread_mutex_t lock_table_latch;
 extern unordered_map<int, trx_obj *> trx_manager; // trx manager
 typedef struct lock_t lock_t;
@@ -66,11 +66,11 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 	lock->lock_state = AWAKE;
 
 	// CASE => if trx first come in record
-
 	trx_obj *obj = trx_manager.find(trx_id)->second;
 
 	auto trx_hash = obj->held_lock.find({table_id, key});
 
+	// MODIFY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	if (trx_hash == obj->held_lock.end())
 	{
 		obj->held_lock[{table_id, key}] = lock;
@@ -103,7 +103,11 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 	else if (hash != hash_table.end())
 	{
 		// only have head
-		if (hash->second.tail == NULL)
+		if(hash->second.head == NULL){
+
+		}
+
+		else if (hash->second.tail == NULL)
 		{
 			// if head is exclusive, then have to sleep
 			if (hash->second.head->lock_m == EXCLUSIVE)
@@ -290,7 +294,7 @@ int lock_release(lock_t *lock_obj)
 			else
 			{
 				lock_t *tmp = lock_obj->next;
-				while (tmp != NULL && tmp->lock_m != SHARED)
+				while (tmp != NULL && tmp->lock_m != EXCLUSIVE)
 				{
 					tmp->lock_state = AWAKE;
 					pthread_cond_signal(&tmp->cond);

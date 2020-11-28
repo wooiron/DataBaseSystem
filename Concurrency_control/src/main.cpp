@@ -9,11 +9,11 @@ extern int verbose;
 void do_transaction()
 {
 	int trx_id;
-	char *ret_val;
+	char ret_val[120];
 	int check;
 	trx_id = trx_begin();
 
-	for (int i = 1; i <= 1; i++)
+	for (int i = 1; i <= 10; i++)
 	{
 		check = db_find(1, i, ret_val, trx_id);
 		if (check == ABORT)
@@ -28,6 +28,22 @@ void do_transaction()
 		else
 		{
 			cout << "Find : " << ret_val << "\n";
+		}
+	}
+	for(int i=11;i<=20;i++){
+		check = db_update(1,i,"b",trx_id);
+		if (check == ABORT)
+		{
+			trx_abort(trx_id, 1, i);
+			cout << "ABORT!!\n";
+		}
+		else if (check == 1)
+		{
+			cout << "CANNOT UPDATE\n";
+		}
+		else
+		{
+			cout << "UPDATE : " << "b" << "\n";
 		}
 	}
 

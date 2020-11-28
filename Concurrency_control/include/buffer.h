@@ -63,7 +63,7 @@ struct Buffer{
 
     map<string,int> pathname_map; // manage pathname and table_id
 
-    unordered_map<Pair1,int,pair_hash1> frame_map; // manage frame group
+    unordered_map<pair<int,int64_t>,int> frame_map; // manage frame group
 
     pthread_mutex_t buffer_manager_latch;
 };
