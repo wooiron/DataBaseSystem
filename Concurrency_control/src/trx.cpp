@@ -27,7 +27,7 @@ void trx_abort(int trx_id, int table_id, int key)
         U++;
     }
 
-    free(obj);
+    delete obj;
 
     pthread_mutex_unlock(&trx_manager_latch);
 }
@@ -69,10 +69,11 @@ int trx_commit(int trx_id)
     for (int i = 0; i < Size; i++)
     {
         lock_release(obj->lock_list.front());
+        free(obj->lock_list.front());
         obj->lock_list.pop_front();
     }
 
-    free(obj);
+    delete obj;
     pthread_mutex_unlock(&trx_manager_latch);
 
     return 0;

@@ -334,6 +334,7 @@ void roll_back(int table_id, int64_t key, char *values)
 	page_idx = buf_get_page(table_id, pagenum);
 	page = buffer.frame_pool[page_idx]->page;
 	index = binary_search(page, key);
+	cout << "Roll Back : " << page->kv_leaf[index].value << ", To :" << values << "\n";
 	strcpy(page->kv_leaf[index].value, values);
 }
 
@@ -376,7 +377,7 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 			trx_manager[trx_id]->undo_list[{table_id, key}] = page->kv_leaf[index].value;
 		}
 		strcpy(page->kv_leaf[index].value, values);
-		buffer.frame_pool[page_idx]->is_dirty=1;	
+		buffer.frame_pool[page_idx]->is_dirty = 1;
 		buffer.frame_pool[page_idx]->is_pinned--;
 		return 0;
 	}

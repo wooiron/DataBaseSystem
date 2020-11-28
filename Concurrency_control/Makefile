@@ -18,7 +18,7 @@ TARGET_OBJ:=$(SRCDIR)main.o
 SRCS_FOR_LIB:=$(SRCDIR)bpt.cpp $(SRCDIR)file.cpp $(SRCDIR)buffer.cpp $(SRCDIR)trx.cpp $(SRCDIR)lock_table.cpp 
 OBJS_FOR_LIB:=$(SRCS_FOR_LIB:.cpp=.o)
 
-CPPFLAGS= -g -fPIC -I $(INC)
+CPPFLAGS= -g -g -std=c++17 -Wall -fPIC -I $(INC)
 
 TARGET=main
 
@@ -27,9 +27,10 @@ all: $(TARGET)
 $(TARGET): $(TARGET_OBJ)
 	$(foreach file, $(SRCS_FOR_LIB), $(CC) $(CPPFLAGS) -o $(file:.cpp=.o) -c $(file);)
 	make static_library
-	$(CC) $(CXXFLAGS) -o $@ $^ -L $(LIBS) -lbpt
+	$(CC) $(CXXFLAGS) -o $@ $^ -L $(LIBS) -lbpt -lpthread
 
 clean:
+
 	rm $(TARGET) $(TARGET_OBJ) $(OBJS_FOR_LIB) $(LIBS)*
 
 library:

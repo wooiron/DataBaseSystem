@@ -4,51 +4,90 @@
 #include <random>
 #include <complex>
 #include <time.h>
+#include <pthread.h>
+
 extern int verbose;
 
-void do_transaction()
+#define TRANSFER_NUMBER 4
+// second have to make log
+
+// thrid have to print lock list
+
+// first have to make multi threading
+
+enum Mode
+{
+	UPDATE,
+	FIND,
+};
+struct LOG
+{
+	int table_id;
+	int key;
+	int trx_id;
+	int mode;
+};
+vector<LOG> LOGGING;
+
+void *do_transaction(void *arg)
 {
 	int trx_id;
-	char ret_val[120];
 	int check;
+	char ret_val[120];
 	trx_id = trx_begin();
-
-	for (int i = 1; i <= 10; i++)
+	// first set table size
+	int table_size = 3; // set size 4
+	int key_size = 30;
+	int table_id, key, mode;
+	// query 30 times
+	for (int i = 1; i <= 100; i++)
 	{
-		check = db_find(1, i, ret_val, trx_id);
-		if (check == ABORT)
+		table_id = rand() % table_size + 1;
+		key = rand() % key_size;
+		mode = rand() % 2;
+		LOGGING.push_back({1, key, trx_id, mode});
+		if (mode == FIND)
 		{
-			trx_abort(trx_id, 1, i);
-			cout << "ABORT!!\n";
-		}
-		else if (check == 1)
-		{
-			cout << "CANNOT FIND\n";
-		}
-		else
-		{
-			cout << "Find : " << ret_val << "\n";
-		}
-	}
-	for(int i=11;i<=20;i++){
-		check = db_update(1,i,"b",trx_id);
-		if (check == ABORT)
-		{
-			trx_abort(trx_id, 1, i);
-			cout << "ABORT!!\n";
-		}
-		else if (check == 1)
-		{
-			cout << "CANNOT UPDATE\n";
+			check = db_find(1, key, ret_val, trx_id);
+			if (check == ABORT)
+			{
+				trx_abort(trx_id, 1, i);
+				cout << "ABORT!!\n";
+				break;
+			}
+			else if (check == 1)
+			{
+				cout << "CANNOT FIND\n";
+			}
+			else
+			{
+				cout << "Find : " << ret_val << "\n";
+			}
 		}
 		else
 		{
-			cout << "UPDATE : " << "b" << "\n";
+			check = db_update(1, key, "a", trx_id);
+			if (check == ABORT)
+			{
+				trx_abort(trx_id, 1, i);
+				cout << "ABORT!!\n";
+				break;
+			}
+			else if (check == 1)
+			{
+				cout << "CANNOT UPDATE\n";
+			}
+			else
+			{
+				cout << "UPDATE : "
+					 << "b"
+					 << "\n";
+			}
 		}
 	}
 
-	trx_commit(trx_id);
-	// randomly create
+	if (check != ABORT)
+		trx_commit(trx_id);
 }
 int main()
 {
@@ -63,6 +102,7 @@ int main()
 	char values[120];
 	char find_value[120];
 	vector<int64_t> value;
+	pthread_t threads[TRANSFER_NUMBER];
 
 	cout << "First set buffer Size : ";
 	cin >> buffer_size;
@@ -234,7 +274,14 @@ int main()
 		}
 		else if (instruction == 'T')
 		{
-			do_transaction();
+			for (int i = 0; i < TRANSFER_NUMBER; i++)
+			{
+				pthread_create(&threads[i], 0, do_transaction, NULL);
+			}
+			for (int i = 0; i < TRANSFER_NUMBER; i++)
+			{
+				pthread_join(threads[i], NULL);
+			}
 		}
 	}
 

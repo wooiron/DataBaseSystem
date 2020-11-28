@@ -9,8 +9,8 @@ using namespace std;
 struct trx_obj
 {
     list<lock_t *> lock_list;
-    unordered_map<pair<int, int64_t>, char *> undo_list;   // key <table_id, record_id> value original data
-    unordered_map<pair<int, int64_t>, lock_t *> held_lock; // key <table_id, record_id>
+    unordered_map<pair<int, int64_t>, char *, pair_hash> undo_list;   // key <table_id, record_id> value original data
+    unordered_map<pair<int, int64_t>, lock_t *, pair_hash> held_lock; // key <table_id, record_id>
 };
 
 int trx_begin(void);

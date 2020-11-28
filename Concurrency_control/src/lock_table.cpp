@@ -1,6 +1,6 @@
 #include "trx.h"
 
-unordered_map<pair<int,int64_t>, Info> hash_table;
+unordered_map<pair<int, int64_t>, Info, pair_hash> hash_table;
 pthread_mutex_t lock_table_latch;
 extern unordered_map<int, trx_obj *> trx_manager; // trx manager
 typedef struct lock_t lock_t;
@@ -66,6 +66,12 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 	lock->lock_state = AWAKE;
 
 	// CASE => if trx first come in record
+	auto Test = trx_manager.find(trx_id);
+	if (Test == trx_manager.end())
+	{
+		cout << "NO TRX ID! WHAT THE HELL?\n";
+		abort();
+	}
 	trx_obj *obj = trx_manager.find(trx_id)->second;
 
 	auto trx_hash = obj->held_lock.find({table_id, key});
@@ -103,8 +109,8 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 	else if (hash != hash_table.end())
 	{
 		// only have head
-		if(hash->second.head == NULL){
-
+		if (hash->second.head == NULL)
+		{
 		}
 
 		else if (hash->second.tail == NULL)
@@ -157,6 +163,9 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 			if (hash->second.tail == NULL)
 			{
 				hash->second.tail = lock;
+				hash->second.head->next = lock;
+				lock->prev = hash->second.head;
+
 				if (hash->second.head->lock_m == SHARED)
 				{
 					if (lock_mode == EXCLUSIVE)
@@ -177,9 +186,6 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 						pthread_cond_wait(&lock->cond, &lock_table_latch);
 					}
 				}
-
-				hash->second.head->next = lock;
-				lock->prev = hash->second.head;
 			}
 			else
 			{
@@ -228,12 +234,6 @@ int lock_release(lock_t *lock_obj)
 
 	auto hash = lock_obj->iter;
 
-	if (hash->second.head != lock_obj)
-	{
-		cout << "ERROR\n";
-		return -1;
-	}
-
 	// SHARED
 	if (lock_obj->lock_m == SHARED)
 	{
@@ -249,6 +249,7 @@ int lock_release(lock_t *lock_obj)
 				if (hash->second.tail == hash->second.head)
 				{
 					hash->second.tail = NULL;
+					hash->second.head->next = NULL;
 				}
 
 				lock_obj->next->lock_state = AWAKE;
@@ -265,7 +266,15 @@ int lock_release(lock_t *lock_obj)
 			if (lock_obj == hash->second.tail)
 			{
 				hash->second.tail = hash->second.tail->prev;
-				hash->second.tail = NULL;
+				if (hash->second.tail == hash->second.head)
+				{
+					hash->second.tail = NULL;
+					hash->second.head->next = NULL;
+				}
+				else
+				{
+					hash->second.tail->next = NULL;
+				}
 			}
 			else
 			{
@@ -302,14 +311,13 @@ int lock_release(lock_t *lock_obj)
 				}
 			}
 		}
-		// no next
 		else
 		{
 			hash->second = {NULL, NULL};
 		}
 	}
 
-	free(lock_obj);
+	//free(lock_obj);
 
 	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
