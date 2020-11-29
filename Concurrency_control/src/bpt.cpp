@@ -360,6 +360,8 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 
 	if (lock_acquire(table_id, key, trx_id, EXCLUSIVE) == NULL)
 	{
+
+		buffer.frame_pool[page_idx]->is_pinned--;
 		return ABORT;
 	}
 
