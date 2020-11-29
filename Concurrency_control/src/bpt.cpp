@@ -321,9 +321,6 @@ void print_tree(int table_id)
 
 void roll_back(int table_id, int64_t key, char *values)
 {
-	int HP_idx = buf_get_header_page(table_id);
-	Header_Page *HP = buffer.frame_pool[HP_idx]->header_page;
-
 	page_t *page;
 	pagenum_t pagenum;
 
@@ -345,9 +342,6 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 	{
 		return -1;
 	}
-
-	int HP_idx = buf_get_header_page(table_id);
-	Header_Page *HP = buffer.frame_pool[HP_idx]->header_page;
 
 	page_t *page;
 	pagenum_t pagenum;
@@ -391,9 +385,6 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id)
 	{
 		return -1;
 	}
-
-	int HP_idx = buf_get_header_page(table_id);
-	Header_Page *HP = buffer.frame_pool[HP_idx]->header_page;
 
 	page_t *page;
 	pagenum_t pagenum;

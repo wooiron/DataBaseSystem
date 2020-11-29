@@ -51,7 +51,7 @@ void *do_transaction(void *arg)
 			check = db_find(1, key, ret_val, trx_id);
 			if (check == ABORT)
 			{
-				trx_abort(trx_id, 1, i);
+				trx_abort(trx_id, 1, key);
 				cout << "ABORT!!\n";
 				break;
 			}
@@ -69,7 +69,7 @@ void *do_transaction(void *arg)
 			check = db_update(1, key, "a", trx_id);
 			if (check == ABORT)
 			{
-				trx_abort(trx_id, 1, i);
+				trx_abort(trx_id, 1, key);
 				cout << "ABORT!!\n";
 				break;
 			}
@@ -80,7 +80,7 @@ void *do_transaction(void *arg)
 			else
 			{
 				cout << "UPDATE : "
-					 << "b"
+					 << "a"
 					 << "\n";
 			}
 		}
@@ -88,6 +88,8 @@ void *do_transaction(void *arg)
 
 	if (check != ABORT)
 		trx_commit(trx_id);
+
+	return NULL;
 }
 int main()
 {
@@ -178,7 +180,7 @@ int main()
 		}
 		else if (instruction == 'd')
 		{
-			int start, end;
+			int start;
 			cin >> table_id;
 			cin >> start;
 			if (db_delete(table_id, start) != 0)

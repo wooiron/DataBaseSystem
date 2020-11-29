@@ -9,7 +9,6 @@ void trx_abort(int trx_id, int table_id, int key)
     pthread_mutex_lock(&trx_manager_latch);
 
     trx_obj *obj = trx_manager[trx_id];
-    auto L = obj->lock_list.begin();
 
     int Size = obj->lock_list.size();
 

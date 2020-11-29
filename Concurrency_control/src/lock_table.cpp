@@ -41,6 +41,7 @@ int Dead_Lock_Detection(int table_id, int64_t key, int trx_id)
 			{
 				if (search_lock->owner_trx_id == trx_id)
 				{
+					cout << "TRX : " << tmp->owner_trx_id << "and TRX : " << trx_id << "ABORT!\n";
 					return ABORT;
 				}
 				search_lock = search_lock->next;
