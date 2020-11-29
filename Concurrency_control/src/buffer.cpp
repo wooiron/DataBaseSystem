@@ -328,7 +328,7 @@ int buf_get_header_page(int table_id)
 int buf_get_page(int table_id, pagenum_t pagenum)
 {
 
-    pthread_mutex_lock(&buffer.buffer_manager_latch);
+    //pthread_mutex_lock(&buffer.buffer_manager_latch);
     int index = 0;
     // if map is empty
     if (buffer.frame_map.empty())
@@ -340,11 +340,11 @@ int buf_get_page(int table_id, pagenum_t pagenum)
 
             Frame *frame = make_frame(table_id, pagenum);
             frame->header_page = page;
-            pthread_mutex_lock(&frame->page_latch);
+            //pthread_mutex_lock(&frame->page_latch);
 
             index = insert_into_frame_pool(frame, table_id, pagenum);
-            pthread_mutex_unlock(&buffer.buffer_manager_latch);
-            pthread_mutex_unlock(&frame->page_latch);
+            //pthread_mutex_unlock(&buffer.buffer_manager_latch);
+            //pthread_mutex_unlock(&frame->page_latch);
             return index;
         }
         else
@@ -354,11 +354,11 @@ int buf_get_page(int table_id, pagenum_t pagenum)
 
             Frame *frame = make_frame(table_id, pagenum);
             frame->page = page;
-            pthread_mutex_lock(&frame->page_latch);
+            //pthread_mutex_lock(&frame->page_latch);
 
             index = insert_into_frame_pool(frame, table_id, pagenum);
-            pthread_mutex_unlock(&buffer.buffer_manager_latch);
-            pthread_mutex_unlock(&frame->page_latch);
+            //pthread_mutex_unlock(&buffer.buffer_manager_latch);
+            //pthread_mutex_unlock(&frame->page_latch);
             return index;
         }
     }
@@ -372,7 +372,7 @@ int buf_get_page(int table_id, pagenum_t pagenum)
             // get frame index
             index = tmp->second;
             modify_frame_pool(index);
-            pthread_mutex_unlock(&buffer.buffer_manager_latch);
+            //pthread_mutex_unlock(&buffer.buffer_manager_latch);
             return index;
         }
         else
@@ -384,11 +384,11 @@ int buf_get_page(int table_id, pagenum_t pagenum)
 
                 Frame *frame = make_frame(table_id, pagenum);
                 frame->header_page = page;
-                pthread_mutex_lock(&frame->page_latch);
+                //pthread_mutex_lock(&frame->page_latch);
 
                 index = insert_into_frame_pool(frame, table_id, pagenum);
-                pthread_mutex_unlock(&buffer.buffer_manager_latch);
-                pthread_mutex_unlock(&frame->page_latch);
+                //pthread_mutex_unlock(&buffer.buffer_manager_latch);
+                //pthread_mutex_unlock(&frame->page_latch);
                 return index;
             }
             else
@@ -398,11 +398,11 @@ int buf_get_page(int table_id, pagenum_t pagenum)
 
                 Frame *frame = make_frame(table_id, pagenum);
                 frame->page = page;
-                pthread_mutex_lock(&frame->page_latch);
+                //pthread_mutex_lock(&frame->page_latch);
 
                 index = insert_into_frame_pool(frame, table_id, pagenum);
-                pthread_mutex_unlock(&buffer.buffer_manager_latch);
-                pthread_mutex_unlock(&frame->page_latch);
+                //pthread_mutex_unlock(&buffer.buffer_manager_latch);
+                //pthread_mutex_unlock(&frame->page_latch);
                 return index;
             }
         }
@@ -547,6 +547,7 @@ int shutdown_buf(void)
     {
         if (frame->is_pinned != 0)
         {
+            cout<<"Pin coutn : "<<frame->is_pinned<<"\n";
             cout << "Page : " << frame->page_num << " is pinned!\n";
             return -1;
         }

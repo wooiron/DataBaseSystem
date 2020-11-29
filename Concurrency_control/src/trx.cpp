@@ -4,6 +4,20 @@ unordered_map<int, trx_obj *> trx_manager; // trx manager
 
 pthread_mutex_t trx_manager_latch = PTHREAD_MUTEX_INITIALIZER;
 
+
+
+void trx_insert_undo_list(int trx_id, int table_id, int key, char *value)
+{
+    pthread_mutex_lock(&trx_manager_latch);
+    if (trx_manager[trx_id]->undo_list.find({table_id, key}) == trx_manager[trx_id]->undo_list.end())
+    {
+        trx_manager[trx_id]->undo_list[{table_id, key}] = value;
+    }
+    pthread_mutex_unlock(&trx_manager_latch);
+}
+
+
+
 void trx_abort(int trx_id, int table_id, int key)
 {
     pthread_mutex_lock(&trx_manager_latch);
@@ -12,18 +26,18 @@ void trx_abort(int trx_id, int table_id, int key)
 
     int Size = obj->lock_list.size();
 
-    for (int i = 0; i < Size; i++)
-    {
-        lock_release(obj->lock_list.front());
-        obj->lock_list.pop_front();
-    }
-
     auto U = obj->undo_list.begin();
     while (U != obj->undo_list.end())
     {
         //rollback
         roll_back(table_id, key, U->second);
         U++;
+    }
+
+    for (int i = 0; i < Size; i++)
+    {
+        lock_release(obj->lock_list.front());
+        obj->lock_list.pop_front();
     }
 
     delete obj;

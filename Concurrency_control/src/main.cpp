@@ -27,7 +27,7 @@ struct LOG
 	int trx_id;
 	int mode;
 };
-vector<LOG> LOGGING;
+//vector<LOG> LOGGING;
 
 void *do_transaction(void *arg)
 {
@@ -45,7 +45,7 @@ void *do_transaction(void *arg)
 		table_id = rand() % table_size + 1;
 		key = rand() % key_size;
 		mode = rand() % 2;
-		LOGGING.push_back({1, key, trx_id, mode});
+		//LOGGING.push_back({1, key, trx_id, mode});
 		if (mode == FIND)
 		{
 			check = db_find(1, key, ret_val, trx_id);

@@ -326,18 +326,26 @@ void roll_back(int table_id, int64_t key, char *values)
 
 	int index;
 	int page_idx;
+	pthread_mutex_lock(&buffer.buffer.manager_latch);
 	pagenum = find(table_id, key);
 
 	page_idx = buf_get_page(table_id, pagenum);
 	page = buffer.frame_pool[page_idx]->page;
+	pthread_mutex_t page_latch = buffer.frame_pool[page_idx]->page_latch;
+	pthread_mutex_lock(&page_latch);
+	pthread_mutex_unlock(&buffer.buffer_manager_latch);
+
 	index = binary_search(page, key);
+
+	pthread_mutex_unlock(&page_latch);
 	cout << "Roll Back : " << page->kv_leaf[index].value << ", To :" << values << "\n";
 	strcpy(page->kv_leaf[index].value, values);
+
 }
 
 int db_update(int table_id, int64_t key, char *values, int trx_id)
 {
-
+	pthread_mutex_lock(&buffer.buffer_manager_latch);
 	if (buffer.table_count < table_id)
 	{
 		return -1;
@@ -349,29 +357,31 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 	int index;
 	int page_idx;
 	pagenum = find(table_id, key);
-	if (pagenum == 0)
+	if (pagenum == 0){
+		pthread_mutex_unlock(&buffer.buffer_manager_latch);
 		return 1;
+	}
 
 	page_idx = buf_get_page(table_id, pagenum);
 	page = buffer.frame_pool[page_idx]->page;
 	buffer.frame_pool[page_idx]->is_pinned++;
+	pthread_mutex_t page_latch = buffer.frame_pool[page_idx]->page_latch;
+	pthread_mutex_lock(&page_latch);
+	pthread_mutex_unlock(&buffer.buffer_manager_latch);
 
 	index = binary_search(page, key);
 
 	if (lock_acquire(table_id, key, trx_id, EXCLUSIVE) == NULL)
 	{
-
+		pthread_mutex_unlock(&page_latch);
 		buffer.frame_pool[page_idx]->is_pinned--;
 		return ABORT;
 	}
-
+	pthread_mutex_unlock(&page_latch);
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys)
 	{
 		// MODIFIED !!!!!!!!!!!!!!!!!!!!!
-		if (trx_manager[trx_id]->undo_list.find({table_id, key}) == trx_manager[trx_id]->undo_list.end())
-		{
-			trx_manager[trx_id]->undo_list[{table_id, key}] = page->kv_leaf[index].value;
-		}
+		trx_insert_undo_list(trx_id,table_id,key,page->kv_leaf[index].value);
 		strcpy(page->kv_leaf[index].value, values);
 		buffer.frame_pool[page_idx]->is_dirty = 1;
 		buffer.frame_pool[page_idx]->is_pinned--;
@@ -387,27 +397,32 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id)
 	{
 		return -1;
 	}
-
+	pthread_mutex_lock(&buffer.buffer_manager_latch);
 	page_t *page;
 	pagenum_t pagenum;
 
 	int index;
 	int page_idx;
 	pagenum = find(table_id, key);
-	if (pagenum == 0)
+	if (pagenum == 0){
+		pthread_mutex_unlock(&buffer.buffer_manager_latch);
 		return 1;
+	}
 
 	page_idx = buf_get_page(table_id, pagenum);
 	page = buffer.frame_pool[page_idx]->page;
 	buffer.frame_pool[page_idx]->is_pinned++;
-
+	pthread_mutex_t page_latch = buffer.frame_pool[page_idx]->page_latch;
+	pthread_mutex_lock(&page_latch);
+	pthread_mutex_unlock(&buffer.buffer_manager_latch);
 	index = binary_search(page, key);
 
 	if (lock_acquire(table_id, key, trx_id, SHARED) == NULL)
 	{
+		pthread_mutex_unlock(&page_latch);
 		return ABORT;
 	}
-
+	pthread_mutex_unlock(&page_latch);
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys)
 	{
 		strcpy(ret_val, page->kv_leaf[index].value);

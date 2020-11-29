@@ -16,5 +16,6 @@ struct trx_obj
 int trx_begin(void);
 int trx_commit(int trx_id);
 void trx_abort(int trx_id, int table_id, int key);
+void trx_insert_undo_list(int trx_id, int table_id, int key, char *value);
 
 #endif

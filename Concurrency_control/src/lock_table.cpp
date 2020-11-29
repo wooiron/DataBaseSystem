@@ -109,7 +109,6 @@ lock_t *lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode)
 
 	else if (hash != hash_table.end())
 	{
-		// only have head
 		if (hash->second.head == NULL)
 		{
 		}
