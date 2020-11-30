@@ -6,9 +6,11 @@
 #include <time.h>
 #include <pthread.h>
 
+extern unordered_map<pair<int, int64_t>, Info, pair_hash> hash_table;
+
 extern int verbose;
 
-#define TRANSFER_NUMBER 4
+int TRANSFER_NUMBER;
 // second have to make log
 
 // thrid have to print lock list
@@ -28,18 +30,36 @@ struct LOG
 	int mode;
 };
 //vector<LOG> LOGGING;
+extern pthread_mutex_t lock_table_latch;
+void print_hash(){
+	pthread_mutex_lock(&lock_table_latch);
+	auto U = hash_table.begin();
+	while(U != hash_table.end()){
+		lock_t* tmp = U->second.head;
+		while(tmp!=NULL){
+			cout <<"(" <<  U->first.first<<", "<<U->first.second<<") ::"<< (tmp->lock_m == EXCLUSIVE ? "X" : "S" ) <<tmp->owner_trx_id<<"("<<(tmp->lock_state == SLEEP ? "S)" : "A)")<<"<-";
+            tmp = tmp->next;
+		}
+		cout<<"\n";
+		U++;
+	}
+	pthread_mutex_unlock(&lock_table_latch);
+}
 
 void *do_transaction(void *arg)
 {
 	int trx_id;
 	int check;
 	char ret_val[120];
+	//print_hash();
 	trx_id = trx_begin();
+
+	int update_count=0;
 	// first set table size
 	int table_size = 3; // set size 4
-	int key_size = 30;
+	int key_size = 9;
 	int table_id, key, mode;
-	// query 30 times
+	
 	for (int i = 1; i <= 100; i++)
 	{
 		table_id = rand() % table_size + 1;
@@ -48,46 +68,58 @@ void *do_transaction(void *arg)
 		//LOGGING.push_back({1, key, trx_id, mode});
 		if (mode == FIND)
 		{
-			check = db_find(1, key, ret_val, trx_id);
+			//cout << "TRX ID : "<<trx_id<<" Find TABLE_ID : "<<table_id<<" KEY : "<<key<<"\n";
+			check = db_find(table_id, key, ret_val, trx_id);
 			if (check == ABORT)
 			{
-				trx_abort(trx_id, 1, key);
-				cout << "ABORT!!\n";
+				trx_abort(trx_id, table_id, key);
+				//cout << "ABORT!!\n";
 				break;
 			}
 			else if (check == 1)
 			{
-				cout << "CANNOT FIND\n";
+				//cout << "CANNOT FIND\n";
 			}
+			/*
 			else
 			{
 				cout << "Find : " << ret_val << "\n";
 			}
+			*/
 		}
 		else
-		{
-			check = db_update(1, key, "a", trx_id);
+		{	
+
+			//cout <<"TRX ID : "<<trx_id<< " Update TABLE_ID : "<<table_id<<" KEY : "<<key<<"\n";
+			check = db_update(table_id, key, "a", trx_id);
+			update_count++;
 			if (check == ABORT)
 			{
-				trx_abort(trx_id, 1, key);
-				cout << "ABORT!!\n";
+				trx_abort(trx_id, table_id, key);
+				//cout << "ABORT!!\n";
 				break;
 			}
 			else if (check == 1)
 			{
-				cout << "CANNOT UPDATE\n";
+				//cout << "CANNOT UPDATE\n";
 			}
+			/*
 			else
 			{
 				cout << "UPDATE : "
 					 << "a"
 					 << "\n";
 			}
+			*/
 		}
 	}
 
-	if (check != ABORT)
+	if (check != ABORT){
+		
+		//print_hash();
 		trx_commit(trx_id);
+		//cout<<"UPDATE COUNT : " <<update_count<<"\n";
+	}
 
 	return NULL;
 }
@@ -104,7 +136,9 @@ int main()
 	char values[120];
 	char find_value[120];
 	vector<int64_t> value;
-	pthread_t threads[TRANSFER_NUMBER];
+	pthread_t threads[101];
+
+	init_lock_table();
 
 	cout << "First set buffer Size : ";
 	cin >> buffer_size;
@@ -276,6 +310,9 @@ int main()
 		}
 		else if (instruction == 'T')
 		{
+
+			cout <<"INPUT TRANSFER NUMBER : ";
+			cin>> TRANSFER_NUMBER;
 			for (int i = 0; i < TRANSFER_NUMBER; i++)
 			{
 				pthread_create(&threads[i], 0, do_transaction, NULL);
@@ -284,6 +321,9 @@ int main()
 			{
 				pthread_join(threads[i], NULL);
 			}
+			cout <<"TRX DONE!\n";
+			//cout<< "FINAL RESULT :: ---\n";
+			//print_hash();
 		}
 	}
 

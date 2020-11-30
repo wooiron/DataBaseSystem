@@ -1,10 +1,11 @@
 #include "bpt.h"
 
-extern unordered_map<int, trx_obj *> trx_manager; // trx manager
 
 int verbose;
 Header_Page *hp;
+
 extern Buffer buffer;
+
 int hp_idx;
 
 void usage1()
@@ -83,6 +84,7 @@ void print_leaf(int table_id)
 	pagenum_t pagenum;
 	page_t *page;
 	int page_idx;
+
 
 	hp_idx = buf_get_header_page(table_id);
 	hp = buffer.frame_pool[hp_idx]->header_page;
@@ -319,6 +321,7 @@ void print_tree(int table_id)
 
 /////////////////////////////////////////////////
 
+
 void roll_back(int table_id, int64_t key, char *values)
 {
 	page_t *page;
@@ -326,31 +329,31 @@ void roll_back(int table_id, int64_t key, char *values)
 
 	int index;
 	int page_idx;
-	pthread_mutex_lock(&buffer.buffer.manager_latch);
+	pthread_mutex_lock(&buffer.buffer_manager_latch);
 	pagenum = find(table_id, key);
-
 	page_idx = buf_get_page(table_id, pagenum);
 	page = buffer.frame_pool[page_idx]->page;
+	buffer.frame_pool[page_idx]->is_pinned++;
 	pthread_mutex_t page_latch = buffer.frame_pool[page_idx]->page_latch;
 	pthread_mutex_lock(&page_latch);
 	pthread_mutex_unlock(&buffer.buffer_manager_latch);
 
 	index = binary_search(page, key);
 
-	pthread_mutex_unlock(&page_latch);
-	cout << "Roll Back : " << page->kv_leaf[index].value << ", To :" << values << "\n";
+	//cout << "Roll Back : " << page->kv_leaf[index].value << ", To :" << values << "\n";
 	strcpy(page->kv_leaf[index].value, values);
+	buffer.frame_pool[page_idx]->is_pinned--;
+	pthread_mutex_unlock(&page_latch);
 
 }
 
 int db_update(int table_id, int64_t key, char *values, int trx_id)
 {
-	pthread_mutex_lock(&buffer.buffer_manager_latch);
 	if (buffer.table_count < table_id)
 	{
 		return -1;
 	}
-
+	pthread_mutex_lock(&buffer.buffer_manager_latch);
 	page_t *page;
 	pagenum_t pagenum;
 
@@ -373,11 +376,10 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 
 	if (lock_acquire(table_id, key, trx_id, EXCLUSIVE) == NULL)
 	{
-		pthread_mutex_unlock(&page_latch);
 		buffer.frame_pool[page_idx]->is_pinned--;
+		pthread_mutex_unlock(&page_latch);
 		return ABORT;
 	}
-	pthread_mutex_unlock(&page_latch);
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys)
 	{
 		// MODIFIED !!!!!!!!!!!!!!!!!!!!!
@@ -385,9 +387,11 @@ int db_update(int table_id, int64_t key, char *values, int trx_id)
 		strcpy(page->kv_leaf[index].value, values);
 		buffer.frame_pool[page_idx]->is_dirty = 1;
 		buffer.frame_pool[page_idx]->is_pinned--;
+		pthread_mutex_unlock(&page_latch);
 		return 0;
 	}
 	buffer.frame_pool[page_idx]->is_pinned--;
+	pthread_mutex_unlock(&page_latch);
 	return 1;
 }
 
@@ -404,6 +408,7 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id)
 	int index;
 	int page_idx;
 	pagenum = find(table_id, key);
+
 	if (pagenum == 0){
 		pthread_mutex_unlock(&buffer.buffer_manager_latch);
 		return 1;
@@ -419,17 +424,21 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id)
 
 	if (lock_acquire(table_id, key, trx_id, SHARED) == NULL)
 	{
+		buffer.frame_pool[page_idx]->is_pinned--;
 		pthread_mutex_unlock(&page_latch);
 		return ABORT;
 	}
-	pthread_mutex_unlock(&page_latch);
 	if (page->kv_leaf[index].key == key && index < page->header.number_of_keys)
 	{
 		strcpy(ret_val, page->kv_leaf[index].value);
 		buffer.frame_pool[page_idx]->is_pinned--;
+		
+		pthread_mutex_unlock(&page_latch);
 		return 0;
 	}
 	buffer.frame_pool[page_idx]->is_pinned--;
+	
+	pthread_mutex_unlock(&page_latch);
 	return 1;
 }
 
@@ -557,8 +566,8 @@ pagenum_t find(int table_id, int64_t key)
 	}
 
 	int page_idx = buf_get_page(table_id, pagenum);
+
 	page = buffer.frame_pool[page_idx]->page;
-	buffer.frame_pool[page_idx]->is_pinned++;
 
 	// go leaf page
 	while (page->header.is_leaf != 1)
@@ -575,14 +584,10 @@ pagenum_t find(int table_id, int64_t key)
 		else
 			pagenum = page->kv_internal[index].pagenum;
 
-		buffer.frame_pool[page_idx]->is_pinned--;
-
 		page_idx = buf_get_page(table_id, pagenum);
-		page = buffer.frame_pool[page_idx]->page;
-		buffer.frame_pool[page_idx]->is_pinned++;
-	}
 
-	buffer.frame_pool[page_idx]->is_pinned--;
+		page = buffer.frame_pool[page_idx]->page;
+	}
 	return pagenum;
 }
 

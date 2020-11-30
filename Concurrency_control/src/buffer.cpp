@@ -547,7 +547,7 @@ int shutdown_buf(void)
     {
         if (frame->is_pinned != 0)
         {
-            cout<<"Pin coutn : "<<frame->is_pinned<<"\n";
+            cout<<"Pin count : "<<frame->is_pinned<<"\n";
             cout << "Page : " << frame->page_num << " is pinned!\n";
             return -1;
         }
