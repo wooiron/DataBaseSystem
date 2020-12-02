@@ -1,0 +1,31 @@
+.searchPage__results button {
+    margin: 5px;
+    padding: 30px 30px;
+    background-color: black;
+    border: 1px solid rgb(39, 37, 37);
+    text-size-adjust: 30px;
+    color: white;
+}
+
+
+.searchPage__results {
+    margin-top: 5%;
+    display: flex;
+    justify-content: center;
+}
+
+.searchComponent {
+    flex-direction: column;
+    margin-left: 260px;
+}
+
+.ais-SearchBox {
+    display: flex;
+    justify-content: center;
+}
+.searchPage__header
+{
+    margin-top: 90px;
+    display: flex;
+    justify-content: center;
+}
